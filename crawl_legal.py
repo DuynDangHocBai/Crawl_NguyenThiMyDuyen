@@ -2,7 +2,7 @@ import json
 import time
 import os
 import requests
-from datetime import datetime  # Thêm thư viện để lấy thời gian thực
+from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -10,6 +10,9 @@ from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+
+# --- BẮT ĐẦU ĐO THỜI GIAN ---
+start_total_time = time.time() 
 
 # 1. Khởi tạo thư mục
 SAVE_DIR = "reuters_legal_final_data"
@@ -42,12 +45,10 @@ try:
 
     for i, link in enumerate(test_links):
         try:
-            # Lấy thời gian hiện tại lúc bắt đầu cào bài này
             scraped_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"--- [{scraped_time}] Đang cào bài {i+1}/{len(test_links)}: {link}")
             
-            print(f"--- [{scraped_time}] Đang cào bài {i+1}: {link}")
             driver.get(link)
-            
             wait = WebDriverWait(driver, 15)
             title_el = wait.until(EC.presence_of_element_located((By.TAG_NAME, 'h1')))
             title = title_el.text
@@ -95,17 +96,33 @@ try:
                     "url": link,
                     "content": content_text,
                     "image": img_path,
-                    "scraped_at": scraped_time # Thêm thời gian vào file JSON
+                    "scraped_at": scraped_time
                 })
                 print(f"Thành công! {title[:40]}... ")
             else:
                 print("Lỗi: Không lấy được nội dung.")
 
         except Exception as e:
+            print(f"Lỗi khi cào bài {link}: {e}")
             continue
 
 finally:
+    # Lưu file JSON
     with open(os.path.join(SAVE_DIR, 'legal_final.json'), 'w', encoding='utf-8') as f:
         json.dump(all_results, f, ensure_ascii=False, indent=4)
+    
     driver.quit()
-    print("Kết thúc. Kiểm tra file trong thư mục legal_data!")
+
+    # --- TÍNH TỔNG THỜI GIAN ---
+    end_total_time = time.time()
+    duration = end_total_time - start_total_time
+    
+    # Chuyển đổi sang định dạng phút:giây
+    minutes = int(duration // 60)
+    seconds = int(duration % 60)
+
+    print("\n" + "="*30)
+    print(f"HOÀN THÀNH CÀO DỮ LIỆU")
+    print(f"Tổng số bài đã lưu: {len(all_results)}")
+    print(f"Tổng thời gian thực hiện: {minutes} phút {seconds} giây")
+    print("="*30)
